@@ -160,25 +160,30 @@ func NewPromClient(opts watcher.MetricsProviderOpts) (watcher.MetricsProviderCli
 		}
 	}
 
-	// Wrap roundTripper with custom headers if provided
-	if opts.Headers != nil && len(opts.Headers) > 0 {
-		roundTripper = &customHeaderRoundTripper{
-			headers: opts.Headers,
-			rt:      roundTripper,
+	// Apply custom headers if provided
+	if len(opts.Headers) > 0 {
+		// Convert map[string]string to *config.Headers
+		configHeaders := &config.Headers{
+			Headers: make(map[string]config.Header),
 		}
+		for key, value := range opts.Headers {
+			configHeaders.Headers[key] = config.Header{
+				Values: []string{value},
+			}
+		}
+		roundTripper = config.NewHeadersRoundTripper(configHeaders, roundTripper)
 	}
 
+	// Apply auth token if provided
 	if promToken != "" {
-		client, err = api.NewClient(api.Config{
-			Address:      promAddress,
-			RoundTripper: config.NewAuthorizationCredentialsRoundTripper("Bearer", config.NewInlineSecret(opts.AuthToken), roundTripper),
-		})
-	} else {
-		client, err = api.NewClient(api.Config{
-			Address:      promAddress,
-			RoundTripper: roundTripper,
-		})
+		roundTripper = config.NewAuthorizationCredentialsRoundTripper("Bearer", config.NewInlineSecret(opts.AuthToken), roundTripper)
 	}
+
+	// Create the client with the final round tripper
+	client, err = api.NewClient(api.Config{
+		Address:      promAddress,
+		RoundTripper: roundTripper,
+	})
 
 	if err != nil {
 		log.Errorf("error creating prometheus client: %v", err)
