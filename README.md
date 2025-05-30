@@ -41,6 +41,8 @@ This will return metrics for all nodes. A query parameter to filter by host can 
 - To use the Prometheus client, please configure environment variables `METRICS_PROVIDER_NAME`, `METRICS_PROVIDER_ADDRESS` and `METRICS_PROVIDER_TOKEN` to `Prometheus`, Prometheus address and auth token. Please do not set `METRICS_PROVIDER_TOKEN` if no authentication 
   is needed to access the Prometheus APIs. Default value of address set is `http://prometheus-k8s:9090` for Prometheus client.
 
+- To add custom headers for Prometheus authentication (e.g., OAuth bypass tokens), use the `METRICS_PROVIDER_HEADERS` environment variable with format `key1=value1,key2=value2`. Example: `METRICS_PROVIDER_HEADERS="http_x_oauth_bypass_token=token123,X-API-Key=key456"`.
+
 - To use the SignalFx client, please configure environment variables `METRICS_PROVIDER_NAME`, `METRICS_PROVIDER_ADDRESS` and `METRICS_PROVIDER_TOKEN` to `SignalFx`, SignalFx address and auth token respectively. Default value of address set is `https://api.signalfx.com` for SignalFx client.
   
 ## Deploy `load-watcher` as a service

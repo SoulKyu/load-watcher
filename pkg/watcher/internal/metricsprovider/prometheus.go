@@ -71,6 +71,25 @@ type promClient struct {
 	client api.Client
 }
 
+// customHeaderRoundTripper wraps an existing RoundTripper and adds custom headers
+type customHeaderRoundTripper struct {
+	headers map[string]string
+	rt      http.RoundTripper
+}
+
+// RoundTrip implements the RoundTripper interface
+func (c *customHeaderRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Clone the request to avoid modifying the original
+	req = req.Clone(req.Context())
+
+	// Add custom headers
+	for key, value := range c.headers {
+		req.Header.Set(key, value)
+	}
+
+	return c.rt.RoundTrip(req)
+}
+
 func loadCAFile(filepath string) (*x509.CertPool, error) {
 	caCert, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -141,6 +160,14 @@ func NewPromClient(opts watcher.MetricsProviderOpts) (watcher.MetricsProviderCli
 		}
 	}
 
+	// Wrap roundTripper with custom headers if provided
+	if opts.Headers != nil && len(opts.Headers) > 0 {
+		roundTripper = &customHeaderRoundTripper{
+			headers: opts.Headers,
+			rt:      roundTripper,
+		}
+	}
+
 	if promToken != "" {
 		client, err = api.NewClient(api.Config{
 			Address:      promAddress,
@@ -148,7 +175,8 @@ func NewPromClient(opts watcher.MetricsProviderOpts) (watcher.MetricsProviderCli
 		})
 	} else {
 		client, err = api.NewClient(api.Config{
-			Address: promAddress,
+			Address:      promAddress,
+			RoundTripper: roundTripper,
 		})
 	}
 
